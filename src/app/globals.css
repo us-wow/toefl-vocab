@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* Apple 스타일 기본 설정 */
+@theme {
+  /* SF Pro 계열 시스템 폰트 — macOS/iOS에서 Apple 네이티브 느낌 */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 부드러운 등장 애니메이션 */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 페이지 전환용 fade-in 클래스 */
+.animate-fade-in {
+  animation: fade-in-up 0.5s ease-out both;
+}
+
+/* 순차 등장용 딜레이 */
+.delay-1 { animation-delay: 0.08s; }
+.delay-2 { animation-delay: 0.16s; }
+.delay-3 { animation-delay: 0.24s; }
+.delay-4 { animation-delay: 0.32s; }
+.delay-5 { animation-delay: 0.4s; }
+.delay-6 { animation-delay: 0.48s; }
+
+/* 글래스모피즘 카드 */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* 스크롤바 숨기기 (Apple 느낌) */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* 선택 영역 색상 */
+::selection {
+  background: rgba(0, 122, 255, 0.15);
+}
+
+/* 입력 필드 포커스 링 제거 후 커스텀 */
+input:focus {
+  outline: none;
+}

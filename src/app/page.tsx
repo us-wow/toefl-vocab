@@ -1,0 +1,412 @@
+"use client";
+
+import { useState, useRef, useEffect, createRef } from "react";
+import { generateBlanks, checkAnswer } from "@/lib/blank-generator";
+import type { Difficulty } from "@/lib/blank-generator";
+import { samplePassages } from "@/lib/sample-passages";
+import { saveRecord, getStats } from "@/lib/quiz-history";
+import BlankInput from "@/components/BlankInput";
+import type { BlankWord } from "@/lib/blank-generator";
+
+const allTopics = [...new Set(samplePassages.map((p) => p.topic))];
+
+type Screen = "onboarding" | "setup" | "quiz";
+
+export default function QuizPage() {
+  const [screen, setScreen] = useState<Screen>("onboarding");
+  const [blankWords, setBlankWords] = useState<BlankWord[]>([]);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState<{
+    correct: number;
+    total: number;
+  } | null>(null);
+  const [currentTopic, setCurrentTopic] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState<string>("all");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>("easy");
+  const [stats, setStats] = useState({ totalGames: 0, averagePercent: 0, bestPercent: 0 });
+
+  useEffect(() => {
+    setStats(getStats());
+    const seen = localStorage.getItem("toefl-vocab-onboarded");
+    if (seen === "true") setScreen("setup");
+  }, []);
+
+  const inputRefs = useRef<React.RefObject<HTMLInputElement | null>[]>([]);
+
+  function finishOnboarding() {
+    localStorage.setItem("toefl-vocab-onboarded", "true");
+    setScreen("setup");
+  }
+
+  function startQuiz() {
+    const filtered =
+      selectedTopic === "all"
+        ? samplePassages
+        : samplePassages.filter((p) => p.topic === selectedTopic);
+    const passage = filtered[Math.floor(Math.random() * filtered.length)];
+    const blanks = generateBlanks(passage.text, selectedDifficulty);
+
+    setBlankWords(blanks);
+    setAnswers({});
+    setSubmitted(false);
+    setResult(null);
+    setScreen("quiz");
+    setCurrentTopic(passage.topic);
+
+    const blankedCount = blanks.filter((bw) => bw.blanked).length;
+    inputRefs.current = Array.from({ length: blankedCount }, () =>
+      createRef<HTMLInputElement>()
+    );
+  }
+
+  function goHome() {
+    setScreen("setup");
+    setBlankWords([]);
+    setSubmitted(false);
+    setResult(null);
+    setStats(getStats());
+  }
+
+  function handleAnswer(index: number, answer: string) {
+    setAnswers((prev) => ({ ...prev, [index]: answer }));
+  }
+
+  function handleSubmit() {
+    setSubmitted(true);
+    const blankedWords = blankWords.filter((bw) => bw.blanked);
+    let correctCount = 0;
+    blankedWords.forEach((bw) => {
+      const wordIndex = blankWords.indexOf(bw);
+      const userAnswer = answers[wordIndex] || "";
+      if (checkAnswer(bw.hidden, userAnswer)) correctCount++;
+    });
+    const total = blankedWords.length;
+    const percentage = Math.round((correctCount / total) * 100);
+    setResult({ correct: correctCount, total });
+    saveRecord({ date: new Date().toISOString(), topic: currentTopic, correct: correctCount, total, percentage });
+    setStats(getStats());
+  }
+
+  let blankCounter = -1;
+
+  const difficultyLabels: Record<Difficulty, { name: string; desc: string }> = {
+    easy: { name: "쉬움", desc: "단어 절반 보여줌" },
+    normal: { name: "보통", desc: "단어 1/3만 보여줌" },
+    hard: { name: "어려움", desc: "거의 모든 단어 빈칸" },
+  };
+
+  /* ─────────────────────────────────────────────
+     온보딩 화면
+  ───────────────────────────────────────────── */
+  if (screen === "onboarding") {
+    return (
+      <div className="space-y-10">
+        {/* 히어로 */}
+        <div className="animate-fade-in text-center pt-8 space-y-4">
+          <h1 className="text-[42px] font-bold tracking-tight leading-tight">
+            Complete<br />the Words.
+          </h1>
+          <p className="text-lg text-[#86868b]">
+            2026 TOEFL Reading 신유형을 연습하세요.
+          </p>
+        </div>
+
+        {/* 핵심 메시지 */}
+        <div className="animate-fade-in delay-1 glass rounded-2xl p-6 space-y-4 border border-white/60">
+          <h2 className="text-xl font-semibold">
+            2026년, TOEFL이 바뀝니다.
+          </h2>
+          <p className="text-[15px] text-[#86868b] leading-relaxed">
+            ETS는 Reading 섹션에 <span className="text-[#1d1d1f] font-medium">Complete the Words</span> 유형을
+            새로 추가했습니다. 학술 지문에서 단어의 뒷부분이 지워지고,
+            <span className="text-[#1d1d1f] font-medium"> 직접 타이핑</span>해야 합니다.
+          </p>
+          <p className="text-[15px] text-[#86868b] leading-relaxed">
+            객관식이 아닙니다. <span className="text-[#1d1d1f] font-medium">정확한 철자</span>를 알아야 풀 수 있습니다.
+          </p>
+        </div>
+
+        {/* 차별점 3가지 */}
+        <div className="space-y-4">
+          {[
+            {
+              title: "실제 시험과 동일한 형식",
+              desc: "ETS 공식 규칙 그대로. 첫 문장은 온전히, 이후 단어의 뒷부분이 빈칸.",
+            },
+            {
+              title: "TOEFL 빈출 학술 지문",
+              desc: "생물학, 역사, 천문학 등 시험에 나오는 주제별 지문 35개+",
+            },
+            {
+              title: "내 실력을 추적",
+              desc: "풀이 횟수, 평균 정답률, 최고 기록을 자동 저장.",
+            },
+          ].map((item, i) => (
+            <div
+              key={item.title}
+              className={`animate-fade-in delay-${i + 2} glass rounded-2xl p-5 border border-white/60`}
+            >
+              <p className="font-semibold text-[15px]">{item.title}</p>
+              <p className="text-[13px] text-[#86868b] mt-1">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* 대상 */}
+        <div className="animate-fade-in delay-5 space-y-3">
+          <h3 className="text-sm font-semibold text-[#86868b] uppercase tracking-wider">
+            이런 분들을 위해 만들었습니다
+          </h3>
+          <ul className="text-[15px] text-[#1d1d1f] space-y-2">
+            <li className="flex gap-2">
+              <span className="text-[#86868b]">—</span>
+              2026 TOEFL을 준비하는데, 신유형 연습할 곳이 없는 분
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[#86868b]">—</span>
+              객관식은 잘 맞는데, 직접 쓰라고 하면 철자가 헷갈리는 분
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[#86868b]">—</span>
+              학술 영어 어휘력을 빠르게 끌어올리고 싶은 분
+            </li>
+          </ul>
+        </div>
+
+        {/* CTA */}
+        <div className="animate-fade-in delay-6 pt-2">
+          <button
+            onClick={finishOnboarding}
+            className="w-full bg-[#0071e3] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[#0077ed] transition-all active:scale-[0.98]"
+          >
+            시작하기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─────────────────────────────────────────────
+     퀴즈 설정 화면
+  ───────────────────────────────────────────── */
+  if (screen === "setup") {
+    return (
+      <div className="space-y-8">
+        {/* 헤더 */}
+        <div className="animate-fade-in text-center space-y-2">
+          <h1 className="text-[28px] font-bold tracking-tight">
+            Complete the Words
+          </h1>
+          <p className="text-[15px] text-[#86868b]">주제와 난이도를 선택하세요</p>
+        </div>
+
+        {/* 통계 카드 */}
+        {stats.totalGames > 0 && (
+          <div className="animate-fade-in delay-1 grid grid-cols-3 gap-3">
+            {[
+              { value: stats.totalGames, label: "풀이 횟수", color: "text-[#1d1d1f]" },
+              { value: `${stats.averagePercent}%`, label: "평균 정답률", color: "text-[#0071e3]" },
+              { value: `${stats.bestPercent}%`, label: "최고 기록", color: "text-[#34c759]" },
+            ].map((stat) => (
+              <div key={stat.label} className="glass rounded-2xl p-4 text-center border border-white/60">
+                <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                <p className="text-[11px] text-[#86868b] mt-1">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 주제 선택 */}
+        <div className="animate-fade-in delay-2 space-y-3">
+          <h2 className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider">주제</h2>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedTopic("all")}
+              className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
+                selectedTopic === "all"
+                  ? "bg-[#1d1d1f] text-white"
+                  : "glass border border-white/60 text-[#1d1d1f] hover:bg-white/80"
+              }`}
+            >
+              전체
+            </button>
+            {allTopics.map((topic) => (
+              <button
+                key={topic}
+                onClick={() => setSelectedTopic(topic)}
+                className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
+                  selectedTopic === topic
+                    ? "bg-[#1d1d1f] text-white"
+                    : "glass border border-white/60 text-[#1d1d1f] hover:bg-white/80"
+                }`}
+              >
+                {topic}
+                <span className="ml-1 opacity-50">
+                  {samplePassages.filter((p) => p.topic === topic).length}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 난이도 선택 */}
+        <div className="animate-fade-in delay-3 space-y-3">
+          <h2 className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider">난이도</h2>
+          <div className="grid grid-cols-3 gap-3">
+            {(["easy", "normal", "hard"] as Difficulty[]).map((diff) => (
+              <button
+                key={diff}
+                onClick={() => setSelectedDifficulty(diff)}
+                className={`p-4 rounded-2xl text-center transition-all border ${
+                  selectedDifficulty === diff
+                    ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
+                    : "glass border-white/60 hover:bg-white/80"
+                }`}
+              >
+                <p className="font-semibold text-[15px]">
+                  {difficultyLabels[diff].name}
+                </p>
+                <p className={`text-[11px] mt-1 ${
+                  selectedDifficulty === diff ? "text-white/60" : "text-[#86868b]"
+                }`}>
+                  {difficultyLabels[diff].desc}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 규칙 */}
+        <div className="animate-fade-in delay-4 glass rounded-2xl p-5 border border-white/60 space-y-3">
+          <h2 className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider">규칙</h2>
+          <ul className="text-[14px] text-[#1d1d1f] space-y-2">
+            <li className="flex gap-2"><span className="text-[#86868b]">1.</span> 첫 문장은 온전히 제공됩니다</li>
+            <li className="flex gap-2"><span className="text-[#86868b]">2.</span> 이후 단어의 뒷부분이 지워집니다</li>
+            <li className="flex gap-2"><span className="text-[#86868b]">3.</span> 빈칸에 정확한 철자를 입력하세요</li>
+            <li className="flex gap-2"><span className="text-[#86868b]">4.</span> 대소문자는 구분하지 않습니다</li>
+          </ul>
+        </div>
+
+        {/* 시작 */}
+        <div className="animate-fade-in delay-5">
+          <button
+            onClick={startQuiz}
+            className="w-full bg-[#0071e3] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[#0077ed] transition-all active:scale-[0.98]"
+          >
+            퀴즈 시작
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─────────────────────────────────────────────
+     퀴즈 진행 화면
+  ───────────────────────────────────────────── */
+  return (
+    <div className="space-y-6">
+      {/* 상단 바 */}
+      <div className="animate-fade-in flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-medium bg-[#1d1d1f]/5 text-[#1d1d1f] px-3 py-1 rounded-full">
+            {currentTopic}
+          </span>
+          <span className="text-[11px] font-medium bg-[#0071e3]/10 text-[#0071e3] px-3 py-1 rounded-full">
+            {difficultyLabels[selectedDifficulty].name}
+          </span>
+        </div>
+        <button
+          onClick={goHome}
+          className="text-[13px] text-[#0071e3] font-medium hover:underline"
+        >
+          홈으로
+        </button>
+      </div>
+
+      {/* 지문 + 빈칸 */}
+      <div className="animate-fade-in delay-1 glass rounded-2xl p-6 border border-white/60 leading-[2.5] text-[17px] shadow-sm">
+        {blankWords.map((bw, index) => {
+          if (bw.blanked) {
+            blankCounter++;
+            const currentBlankIndex = blankCounter;
+            return (
+              <span key={index}>
+                <BlankInput
+                  visible={bw.visible}
+                  hidden={bw.hidden}
+                  submitted={submitted}
+                  onAnswer={(answer) => handleAnswer(index, answer)}
+                  inputRef={inputRefs.current[currentBlankIndex]}
+                  onEnter={() => {
+                    const nextRef = inputRefs.current[currentBlankIndex + 1];
+                    if (nextRef?.current) nextRef.current.focus();
+                  }}
+                />
+                {index < blankWords.length - 1 && " "}
+              </span>
+            );
+          }
+          return (
+            <span key={index}>
+              <span>{bw.original}</span>
+              {index < blankWords.length - 1 && " "}
+            </span>
+          );
+        })}
+      </div>
+
+      {/* 빈칸 개수 */}
+      <p className="animate-fade-in delay-2 text-[13px] text-[#86868b] text-center">
+        빈칸 {blankWords.filter((bw) => bw.blanked).length}개
+      </p>
+
+      {/* 제출 / 결과 */}
+      {!submitted ? (
+        <div className="animate-fade-in delay-3">
+          <button
+            onClick={handleSubmit}
+            className="w-full bg-[#34c759] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[#30b855] transition-all active:scale-[0.98]"
+          >
+            제출하기
+          </button>
+        </div>
+      ) : (
+        <div className="animate-fade-in space-y-4">
+          {result && (
+            <div
+              className={`text-center py-6 rounded-2xl ${
+                result.correct === result.total
+                  ? "bg-[#34c759]/10 text-[#248a3d]"
+                  : result.correct >= result.total / 2
+                    ? "bg-[#ff9f0a]/10 text-[#c77c00]"
+                    : "bg-[#ff3b30]/10 text-[#d70015]"
+              }`}
+            >
+              <p className="text-3xl font-bold">
+                {Math.round((result.correct / result.total) * 100)}%
+              </p>
+              <p className="text-[15px] mt-1 opacity-80">
+                {result.correct} / {result.total} 정답
+              </p>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={goHome}
+              className="glass border border-white/60 text-[#1d1d1f] py-4 rounded-full text-[17px] font-semibold hover:bg-white/80 transition-all active:scale-[0.98]"
+            >
+              홈으로
+            </button>
+            <button
+              onClick={startQuiz}
+              className="bg-[#0071e3] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[#0077ed] transition-all active:scale-[0.98]"
+            >
+              다음 문제
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
