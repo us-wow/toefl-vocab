@@ -38,8 +38,9 @@ export function generateBlanks(
     const words = sentence.trim().split(/\s+/);
 
     words.forEach((word, wordIndex) => {
-      // 첫 문장과 마지막 문장은 빈칸 없음 — 맥락 추측할 수 있게
-      if (sentenceIndex === 0 || sentenceIndex === lastSentenceIndex) {
+      // 첫 문장은 빈칸 없음, 마지막 문장은 3문장 이상일 때만 빈칸 제거
+      // (2문장짜리 지문은 마지막 문장에도 빈칸을 넣어야 빈칸이 0개가 안 됨)
+      if (sentenceIndex === 0 || (sentences.length >= 3 && sentenceIndex === lastSentenceIndex)) {
         result.push({ original: word, visible: word, hidden: "", blanked: false, sentenceIndex, wordIndex });
         return;
       }
