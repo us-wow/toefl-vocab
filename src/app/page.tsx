@@ -180,23 +180,23 @@ export default function QuizPage() {
           <h1 className="text-[42px] font-bold tracking-tight leading-tight">
             Complete<br />the Words.
           </h1>
-          <p className="text-lg text-[#86868b]">
+          <p className="text-lg text-[var(--color-muted)]">
             2026 TOEFL Reading 신유형을 연습하세요.
           </p>
         </div>
 
         {/* 핵심 메시지 */}
-        <div className="animate-fade-in delay-1 glass rounded-2xl p-6 space-y-4 border border-white/60">
+        <div className="animate-fade-in delay-1 glass rounded-2xl p-6 space-y-4 border border-[var(--color-glass-border)]">
           <h2 className="text-xl font-semibold">
             2026년, TOEFL이 바뀝니다.
           </h2>
-          <p className="text-[15px] text-[#86868b] leading-relaxed">
-            ETS는 Reading 섹션에 <span className="text-[#1d1d1f] font-medium">Complete the Words</span> 유형을
+          <p className="text-[15px] text-[var(--color-muted)] leading-relaxed">
+            ETS는 Reading 섹션에 <span className="text-[var(--color-text)] font-medium">Complete the Words</span> 유형을
             새로 추가했습니다. 학술 지문에서 단어의 뒷부분이 지워지고,
-            <span className="text-[#1d1d1f] font-medium"> 직접 타이핑</span>해야 합니다.
+            <span className="text-[var(--color-text)] font-medium"> 직접 타이핑</span>해야 합니다.
           </p>
-          <p className="text-[15px] text-[#86868b] leading-relaxed">
-            객관식이 아닙니다. <span className="text-[#1d1d1f] font-medium">정확한 철자</span>를 알아야 풀 수 있습니다.
+          <p className="text-[15px] text-[var(--color-muted)] leading-relaxed">
+            객관식이 아닙니다. <span className="text-[var(--color-text)] font-medium">정확한 철자</span>를 알아야 풀 수 있습니다.
           </p>
         </div>
 
@@ -218,30 +218,30 @@ export default function QuizPage() {
           ].map((item, i) => (
             <div
               key={item.title}
-              className={`animate-fade-in delay-${i + 2} glass rounded-2xl p-5 border border-white/60`}
+              className={`animate-fade-in delay-${i + 2} glass rounded-2xl p-5 border border-[var(--color-glass-border)]`}
             >
               <p className="font-semibold text-[15px]">{item.title}</p>
-              <p className="text-[13px] text-[#86868b] mt-1">{item.desc}</p>
+              <p className="text-[13px] text-[var(--color-muted)] mt-1">{item.desc}</p>
             </div>
           ))}
         </div>
 
         {/* 대상 */}
         <div className="animate-fade-in delay-5 space-y-3">
-          <h3 className="text-sm font-semibold text-[#86868b] uppercase tracking-wider">
+          <h3 className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wider">
             이런 분들을 위해 만들었습니다
           </h3>
-          <ul className="text-[15px] text-[#1d1d1f] space-y-2">
+          <ul className="text-[15px] text-[var(--color-text)] space-y-2">
             <li className="flex gap-2">
-              <span className="text-[#86868b]">—</span>
+              <span className="text-[var(--color-muted)]">—</span>
               2026 TOEFL을 준비하는데, 신유형 연습할 곳이 없는 분
             </li>
             <li className="flex gap-2">
-              <span className="text-[#86868b]">—</span>
+              <span className="text-[var(--color-muted)]">—</span>
               객관식은 잘 맞는데, 직접 쓰라고 하면 철자가 헷갈리는 분
             </li>
             <li className="flex gap-2">
-              <span className="text-[#86868b]">—</span>
+              <span className="text-[var(--color-muted)]">—</span>
               학술 영어 어휘력을 빠르게 끌어올리고 싶은 분
             </li>
           </ul>
@@ -251,7 +251,7 @@ export default function QuizPage() {
         <div className="animate-fade-in delay-6 pt-2">
           <button
             onClick={finishOnboarding}
-            className="w-full bg-[#0071e3] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[#0077ed] transition-all active:scale-[0.98]"
+            className="w-full bg-[var(--color-accent)] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[var(--color-accent-hover)] transition-all active:scale-[0.98]"
           >
             시작하기
           </button>
@@ -270,11 +270,11 @@ export default function QuizPage() {
         <div className="animate-fade-in flex justify-between items-start">
           <div className="flex-1 text-center space-y-2">
             <h1 className="text-[28px] font-bold tracking-tight">Complete the Words</h1>
-            <p className="text-[15px] text-[#86868b]">주제와 난이도를 선택하세요</p>
+            <p className="text-[15px] text-[var(--color-muted)]">주제와 난이도를 선택하세요</p>
           </div>
           <button
             onClick={toggleTheme}
-            className="text-[20px] p-2 rounded-full hover:bg-[#1d1d1f]/5 transition-colors"
+            className="text-[20px] p-2 rounded-full hover:bg-[var(--color-text)]/5 transition-colors"
             title={`테마: ${currentTheme === "light" ? "라이트" : currentTheme === "dark" ? "다크" : "시스템"}`}
           >
             {currentTheme === "light" ? "☀️" : currentTheme === "dark" ? "🌙" : "💻"}
@@ -285,13 +285,13 @@ export default function QuizPage() {
         {stats.totalGames > 0 && (
           <div className="animate-fade-in delay-1 grid grid-cols-3 gap-3">
             {[
-              { value: stats.totalGames, label: "풀이 횟수", color: "text-[#1d1d1f]" },
-              { value: `${stats.averagePercent}%`, label: "평균 정답률", color: "text-[#0071e3]" },
-              { value: `${stats.bestPercent}%`, label: "최고 기록", color: "text-[#34c759]" },
+              { value: stats.totalGames, label: "풀이 횟수", color: "text-[var(--color-text)]" },
+              { value: `${stats.averagePercent}%`, label: "평균 정답률", color: "text-[var(--color-accent)]" },
+              { value: `${stats.bestPercent}%`, label: "최고 기록", color: "text-[var(--color-success)]" },
             ].map((stat) => (
-              <div key={stat.label} className="glass rounded-2xl p-4 text-center border border-white/60">
+              <div key={stat.label} className="glass rounded-2xl p-4 text-center border border-[var(--color-glass-border)]">
                 <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-                <p className="text-[11px] text-[#86868b] mt-1">{stat.label}</p>
+                <p className="text-[11px] text-[var(--color-muted)] mt-1">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -299,14 +299,14 @@ export default function QuizPage() {
 
         {/* 주제 선택 */}
         <div className="animate-fade-in delay-2 space-y-3">
-          <h2 className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider">주제</h2>
+          <h2 className="text-[13px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">주제</h2>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedTopic("all")}
               className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
                 selectedTopic === "all"
-                  ? "bg-[#1d1d1f] text-white"
-                  : "glass border border-white/60 text-[#1d1d1f] hover:bg-white/80"
+                  ? "bg-[var(--color-text)] text-white"
+                  : "glass border border-[var(--color-glass-border)] text-[var(--color-text)] hover:bg-[var(--color-glass-hover)]"
               }`}
             >
               전체
@@ -317,8 +317,8 @@ export default function QuizPage() {
                 onClick={() => setSelectedTopic(topic)}
                 className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
                   selectedTopic === topic
-                    ? "bg-[#1d1d1f] text-white"
-                    : "glass border border-white/60 text-[#1d1d1f] hover:bg-white/80"
+                    ? "bg-[var(--color-text)] text-white"
+                    : "glass border border-[var(--color-glass-border)] text-[var(--color-text)] hover:bg-[var(--color-glass-hover)]"
                 }`}
               >
                 {topic}
@@ -332,7 +332,7 @@ export default function QuizPage() {
 
         {/* 난이도 선택 */}
         <div className="animate-fade-in delay-3 space-y-3">
-          <h2 className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider">난이도</h2>
+          <h2 className="text-[13px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">난이도</h2>
           <div className="grid grid-cols-3 gap-3">
             {(["easy", "normal", "hard"] as Difficulty[]).map((diff) => (
               <button
@@ -340,15 +340,15 @@ export default function QuizPage() {
                 onClick={() => setSelectedDifficulty(diff)}
                 className={`p-4 rounded-2xl text-center transition-all border ${
                   selectedDifficulty === diff
-                    ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                    : "glass border-white/60 hover:bg-white/80"
+                    ? "bg-[var(--color-text)] text-white border-[var(--color-text)]"
+                    : "glass border-[var(--color-glass-border)] hover:bg-[var(--color-glass-hover)]"
                 }`}
               >
                 <p className="font-semibold text-[15px]">
                   {difficultyLabels[diff].name}
                 </p>
                 <p className={`text-[11px] mt-1 ${
-                  selectedDifficulty === diff ? "text-white/60" : "text-[#86868b]"
+                  selectedDifficulty === diff ? "text-white/60" : "text-[var(--color-muted)]"
                 }`}>
                   {difficultyLabels[diff].desc}
                 </p>
@@ -359,32 +359,32 @@ export default function QuizPage() {
 
         {/* 타이머 설정 */}
         <div className="animate-fade-in delay-4 space-y-3">
-          <h2 className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider">타이머</h2>
+          <h2 className="text-[13px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">타이머</h2>
           <button
             onClick={() => setTimerEnabled(!timerEnabled)}
             className={`w-full p-4 rounded-2xl text-center transition-all border ${
               timerEnabled
-                ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                : "glass border-white/60 hover:bg-white/80"
+                ? "bg-[var(--color-text)] text-white border-[var(--color-text)]"
+                : "glass border-[var(--color-glass-border)] hover:bg-[var(--color-glass-hover)]"
             }`}
           >
             <p className="font-semibold text-[15px]">
               {timerEnabled ? "ON — 2분 30초" : "OFF"}
             </p>
-            <p className={`text-[11px] mt-1 ${timerEnabled ? "text-white/60" : "text-[#86868b]"}`}>
+            <p className={`text-[11px] mt-1 ${timerEnabled ? "text-white/60" : "text-[var(--color-muted)]"}`}>
               {timerEnabled ? "시간 초과 시 자동 제출" : "시간 제한 없이 연습"}
             </p>
           </button>
         </div>
 
         {/* 규칙 */}
-        <div className="animate-fade-in delay-4 glass rounded-2xl p-5 border border-white/60 space-y-3">
-          <h2 className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider">규칙</h2>
-          <ul className="text-[14px] text-[#1d1d1f] space-y-2">
-            <li className="flex gap-2"><span className="text-[#86868b]">1.</span> 첫 문장은 온전히 제공됩니다</li>
-            <li className="flex gap-2"><span className="text-[#86868b]">2.</span> 이후 단어의 뒷부분이 지워집니다</li>
-            <li className="flex gap-2"><span className="text-[#86868b]">3.</span> 빈칸에 정확한 철자를 입력하세요</li>
-            <li className="flex gap-2"><span className="text-[#86868b]">4.</span> 대소문자는 구분하지 않습니다</li>
+        <div className="animate-fade-in delay-4 glass rounded-2xl p-5 border border-[var(--color-glass-border)] space-y-3">
+          <h2 className="text-[13px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">규칙</h2>
+          <ul className="text-[14px] text-[var(--color-text)] space-y-2">
+            <li className="flex gap-2"><span className="text-[var(--color-muted)]">1.</span> 첫 문장은 온전히 제공됩니다</li>
+            <li className="flex gap-2"><span className="text-[var(--color-muted)]">2.</span> 이후 단어의 뒷부분이 지워집니다</li>
+            <li className="flex gap-2"><span className="text-[var(--color-muted)]">3.</span> 빈칸에 정확한 철자를 입력하세요</li>
+            <li className="flex gap-2"><span className="text-[var(--color-muted)]">4.</span> 대소문자는 구분하지 않습니다</li>
           </ul>
         </div>
 
@@ -392,7 +392,7 @@ export default function QuizPage() {
         <div className="animate-fade-in delay-5">
           <button
             onClick={startQuiz}
-            className="w-full bg-[#0071e3] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[#0077ed] transition-all active:scale-[0.98]"
+            className="w-full bg-[var(--color-accent)] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[var(--color-accent-hover)] transition-all active:scale-[0.98]"
           >
             퀴즈 시작
           </button>
@@ -409,22 +409,22 @@ export default function QuizPage() {
       {/* 상단 바 */}
       <div className="animate-fade-in flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium bg-[#1d1d1f]/5 text-[#1d1d1f] px-3 py-1 rounded-full">
+          <span className="text-[11px] font-medium bg-[var(--color-text)]/5 text-[var(--color-text)] px-3 py-1 rounded-full">
             {currentTopic}
           </span>
-          <span className="text-[11px] font-medium bg-[#0071e3]/10 text-[#0071e3] px-3 py-1 rounded-full">
+          <span className="text-[11px] font-medium bg-[var(--color-accent)]/10 text-[var(--color-accent)] px-3 py-1 rounded-full">
             {difficultyLabels[selectedDifficulty].name}
           </span>
         </div>
         {/* 타이머 표시 */}
         {timerEnabled && (
-          <span className={`text-[13px] font-mono font-semibold ${timeLeft <= 30 ? "text-[#ff3b30]" : "text-[#1d1d1f]"}`}>
+          <span className={`text-[13px] font-mono font-semibold ${timeLeft <= 30 ? "text-[var(--color-error)]" : "text-[var(--color-text)]"}`}>
             {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
           </span>
         )}
         <button
           onClick={goHome}
-          className="text-[13px] text-[#0071e3] font-medium hover:underline"
+          className="text-[13px] text-[var(--color-accent)] font-medium hover:underline"
         >
           홈으로
         </button>
@@ -432,9 +432,9 @@ export default function QuizPage() {
 
       {/* 진행률 바 */}
       <div className="animate-fade-in space-y-1">
-        <div className="h-1.5 bg-[#1d1d1f]/5 rounded-full overflow-hidden">
+        <div className="h-1.5 bg-[var(--color-text)]/5 rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#0071e3] rounded-full transition-all duration-300"
+            className="h-full bg-[var(--color-accent)] rounded-full transition-all duration-300"
             style={{
               width: `${blankWords.filter(bw => bw.blanked).length > 0
                 ? Math.round((Object.values(answers).filter(v => v.trim() !== "").length / blankWords.filter(bw => bw.blanked).length) * 100)
@@ -442,13 +442,13 @@ export default function QuizPage() {
             }}
           />
         </div>
-        <p className="text-[11px] text-[#86868b] text-right">
+        <p className="text-[11px] text-[var(--color-muted)] text-right">
           {Object.values(answers).filter(v => v.trim() !== "").length} / {blankWords.filter(bw => bw.blanked).length}
         </p>
       </div>
 
       {/* 지문 + 빈칸 */}
-      <div className="animate-fade-in delay-1 glass rounded-2xl p-6 border border-white/60 leading-[2.5] text-[17px] shadow-sm">
+      <div className="animate-fade-in delay-1 glass rounded-2xl p-6 border border-[var(--color-glass-border)] leading-[2.5] text-[17px] shadow-sm">
         {blankWords.map((bw, index) => {
           if (bw.blanked) {
             blankCounter++;
@@ -484,7 +484,7 @@ export default function QuizPage() {
       </div>
 
       {/* 빈칸 개수 */}
-      <p className="animate-fade-in delay-2 text-[13px] text-[#86868b] text-center">
+      <p className="animate-fade-in delay-2 text-[13px] text-[var(--color-muted)] text-center">
         빈칸 {blankWords.filter((bw) => bw.blanked).length}개
       </p>
 
@@ -493,7 +493,7 @@ export default function QuizPage() {
         <div className="animate-fade-in delay-3">
           <button
             onClick={trySubmit}
-            className="w-full bg-[#34c759] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[#30b855] transition-all active:scale-[0.98]"
+            className="w-full bg-[var(--color-success)] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[var(--color-success)] transition-all active:scale-[0.98]"
           >
             제출하기
           </button>
@@ -504,10 +504,10 @@ export default function QuizPage() {
             <div
               className={`text-center py-6 rounded-2xl ${
                 result.correct === result.total
-                  ? "bg-[#34c759]/10 text-[#248a3d]"
+                  ? "bg-[var(--color-success)]/10 text-[var(--color-success-dark)]"
                   : result.correct >= result.total / 2
-                    ? "bg-[#ff9f0a]/10 text-[#c77c00]"
-                    : "bg-[#ff3b30]/10 text-[#d70015]"
+                    ? "bg-[var(--color-warning)]/10 text-[var(--color-warning-dark)]"
+                    : "bg-[var(--color-error)]/10 text-[var(--color-error-dark)]"
               }`}
             >
               <p className="text-3xl font-bold">
@@ -530,12 +530,12 @@ export default function QuizPage() {
             <div className="space-y-2">
               <button
                 onClick={() => setShowTranslation(!showTranslation)}
-                className="text-[13px] text-[#0071e3] font-medium hover:underline w-full text-center"
+                className="text-[13px] text-[var(--color-accent)] font-medium hover:underline w-full text-center"
               >
                 {showTranslation ? "번역 숨기기" : "한국어 번역 보기"}
               </button>
               {showTranslation && (
-                <div className="glass rounded-2xl p-5 border border-white/60 text-[14px] text-[#86868b] leading-relaxed">
+                <div className="glass rounded-2xl p-5 border border-[var(--color-glass-border)] text-[14px] text-[var(--color-muted)] leading-relaxed">
                   {currentPassage.translation}
                 </div>
               )}
@@ -545,13 +545,13 @@ export default function QuizPage() {
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={goHome}
-              className="glass border border-white/60 text-[#1d1d1f] py-4 rounded-full text-[17px] font-semibold hover:bg-white/80 transition-all active:scale-[0.98]"
+              className="glass border border-[var(--color-glass-border)] text-[var(--color-text)] py-4 rounded-full text-[17px] font-semibold hover:bg-[var(--color-glass-hover)] transition-all active:scale-[0.98]"
             >
               홈으로
             </button>
             <button
               onClick={startQuiz}
-              className="bg-[#0071e3] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[#0077ed] transition-all active:scale-[0.98]"
+              className="bg-[var(--color-accent)] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[var(--color-accent-hover)] transition-all active:scale-[0.98]"
             >
               다음 문제
             </button>
@@ -561,27 +561,27 @@ export default function QuizPage() {
 
       {/* 제출 확인 모달 */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="glass rounded-2xl p-6 mx-6 max-w-sm w-full border border-white/60 space-y-4 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] backdrop-blur-sm">
+          <div className="glass rounded-2xl p-6 mx-6 max-w-sm w-full border border-[var(--color-glass-border)] space-y-4 shadow-xl">
             <p className="text-[17px] font-semibold text-center">
               빈칸 {blankWords.filter(bw => bw.blanked).filter(bw => {
                 const idx = blankWords.indexOf(bw);
                 return !answers[idx] || answers[idx].trim() === "";
               }).length}개가 비어있습니다
             </p>
-            <p className="text-[14px] text-[#86868b] text-center">
+            <p className="text-[14px] text-[var(--color-muted)] text-center">
               그래도 제출하시겠습니까?
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setShowConfirmDialog(false)}
-                className="glass border border-white/60 text-[#1d1d1f] py-3 rounded-full text-[15px] font-semibold hover:bg-white/80 transition-all"
+                className="glass border border-[var(--color-glass-border)] text-[var(--color-text)] py-3 rounded-full text-[15px] font-semibold hover:bg-[var(--color-glass-hover)] transition-all"
               >
                 돌아가기
               </button>
               <button
                 onClick={doSubmit}
-                className="bg-[#ff9f0a] text-white py-3 rounded-full text-[15px] font-semibold hover:bg-[#e8900a] transition-all"
+                className="bg-[var(--color-warning)] text-white py-3 rounded-full text-[15px] font-semibold hover:bg-[var(--color-warning)] transition-all"
               >
                 제출하기
               </button>

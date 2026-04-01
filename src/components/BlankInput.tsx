@@ -38,7 +38,7 @@ export default function BlankInput({
   return (
     <span className="inline-flex flex-wrap items-baseline gap-0 relative">
       {/* 보이는 앞부분 */}
-      <span className="text-[#1d1d1f]">{visible}</span>
+      <span className="text-[var(--color-text)]">{visible}</span>
 
       {/* 힌트 버튼 — 제출 전에만 표시 */}
       {!submitted && hint && (
@@ -81,16 +81,16 @@ export default function BlankInput({
         className={`border-b-2 px-0.5 min-h-[36px] py-1 text-center transition-all duration-200 bg-transparent ${
           submitted
             ? isCorrect
-              ? "border-[#34c759] text-[#248a3d] font-semibold"
-              : "border-[#ff3b30] text-[#ff3b30] line-through"
-            : "border-[#0071e3]/40 focus:border-[#0071e3]"
+              ? "border-[var(--color-success)] text-[var(--color-success-dark)] font-semibold"
+              : "border-[var(--color-error)] text-[var(--color-error)] line-through"
+            : "border-[var(--color-accent)]/40 focus:border-[var(--color-accent)]"
         }`}
         style={{ width: `${Math.max(hidden.length, 3) * 0.75}em` }}
       />
 
       {/* 오답이면 정답 표시 */}
       {isWrong && (
-        <span className="text-[#248a3d] text-[13px] font-semibold ml-0.5">
+        <span className="text-[var(--color-success-dark)] text-[13px] font-semibold ml-0.5">
           {hidden}
         </span>
       )}
