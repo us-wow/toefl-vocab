@@ -5,6 +5,9 @@ import { generateBlanks, checkAnswer } from "@/lib/blank-generator";
 import type { Difficulty } from "@/lib/blank-generator";
 import { samplePassages } from "@/lib/sample-passages";
 import { saveRecord, getStats } from "@/lib/quiz-history";
+import { lookupWord } from "@/lib/word-data";
+import { getTheme, setTheme, applyTheme, watchSystemTheme } from "@/lib/theme";
+import type { Theme } from "@/lib/theme";
 import BlankInput from "@/components/BlankInput";
 import type { BlankWord } from "@/lib/blank-generator";
 
@@ -25,14 +28,55 @@ export default function QuizPage() {
   const [selectedTopic, setSelectedTopic] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>("easy");
   const [stats, setStats] = useState({ totalGames: 0, averagePercent: 0, bestPercent: 0 });
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false); // 제출 확인 모달
+  const [timerEnabled, setTimerEnabled] = useState(false); // 타이머 ON/OFF
+  const [timeLeft, setTimeLeft] = useState(0); // 남은 시간 (초)
+  const [currentTheme, setCurrentTheme] = useState<Theme>("system"); // 다크모드 테마
+  const [hintsUsed, setHintsUsed] = useState(0); // 힌트 사용 횟수
+  const [currentPassage, setCurrentPassage] = useState<typeof samplePassages[0] | null>(null); // 현재 지문 (번역 표시용)
+  const [showTranslation, setShowTranslation] = useState(false); // 한국어 번역 토글
 
   useEffect(() => {
     setStats(getStats());
     const seen = localStorage.getItem("toefl-vocab-onboarded");
     if (seen === "true") setScreen("setup");
+
+    // 다크모드 초기화
+    const savedTheme = getTheme();
+    setCurrentTheme(savedTheme);
+    applyTheme(savedTheme);
+    const cleanup = watchSystemTheme(() => {
+      const t = getTheme();
+      if (t === "system") applyTheme(t);
+    });
+    return () => cleanup();
   }, []);
 
   const inputRefs = useRef<React.RefObject<HTMLInputElement | null>[]>([]);
+
+  // 타이머 카운트다운 — 0이 되면 자동 제출
+  useEffect(() => {
+    if (screen !== "quiz" || !timerEnabled || submitted || timeLeft <= 0) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          doSubmit(); // 시간 초과 시 자동 제출
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, timerEnabled, submitted, timeLeft > 0]);
+
+  // 다크모드 순환 토글: light → dark → system → light ...
+  function toggleTheme() {
+    const next: Theme = currentTheme === "light" ? "dark" : currentTheme === "dark" ? "system" : "light";
+    setCurrentTheme(next);
+    setTheme(next);
+  }
 
   function finishOnboarding() {
     localStorage.setItem("toefl-vocab-onboarded", "true");
@@ -45,19 +89,31 @@ export default function QuizPage() {
         ? samplePassages
         : samplePassages.filter((p) => p.topic === selectedTopic);
     const passage = filtered[Math.floor(Math.random() * filtered.length)];
+    setCurrentPassage(passage); // 번역 표시용 현재 지문 저장
     const blanks = generateBlanks(passage.text, selectedDifficulty);
 
     setBlankWords(blanks);
     setAnswers({});
     setSubmitted(false);
     setResult(null);
+    setShowConfirmDialog(false);
+    setHintsUsed(0); // 힌트 사용 횟수 초기화
+    setShowTranslation(false); // 번역 토글 초기화
     setScreen("quiz");
     setCurrentTopic(passage.topic);
+
+    // 타이머 설정 — 켜져 있으면 150초(2분 30초)
+    if (timerEnabled) setTimeLeft(150);
 
     const blankedCount = blanks.filter((bw) => bw.blanked).length;
     inputRefs.current = Array.from({ length: blankedCount }, () =>
       createRef<HTMLInputElement>()
     );
+
+    // 첫 빈칸 자동 포커스 (렌더링 후 실행되도록 setTimeout)
+    setTimeout(() => {
+      inputRefs.current[0]?.current?.focus();
+    }, 300);
   }
 
   function goHome() {
@@ -72,7 +128,24 @@ export default function QuizPage() {
     setAnswers((prev) => ({ ...prev, [index]: answer }));
   }
 
-  function handleSubmit() {
+  // 제출 버튼 클릭 시 — 빈 빈칸이 있으면 확인 모달 표시
+  function trySubmit() {
+    const blankedWords = blankWords.filter((bw) => bw.blanked);
+    const emptyCount = blankedWords.filter((bw) => {
+      const idx = blankWords.indexOf(bw);
+      return !answers[idx] || answers[idx].trim() === "";
+    }).length;
+
+    if (emptyCount > 0) {
+      setShowConfirmDialog(true); // 빈칸 있으면 확인 모달
+    } else {
+      doSubmit(); // 다 채웠으면 바로 제출
+    }
+  }
+
+  // 실제 제출 처리
+  function doSubmit() {
+    setShowConfirmDialog(false);
     setSubmitted(true);
     const blankedWords = blankWords.filter((bw) => bw.blanked);
     let correctCount = 0;
@@ -91,8 +164,8 @@ export default function QuizPage() {
   let blankCounter = -1;
 
   const difficultyLabels: Record<Difficulty, { name: string; desc: string }> = {
-    easy: { name: "쉬움", desc: "단어 절반 보여줌" },
-    normal: { name: "보통", desc: "단어 1/3만 보여줌" },
+    easy: { name: "쉬움", desc: "빈칸 적고 글자 많이 보임" },
+    normal: { name: "보통", desc: "단어 절반 보여줌" },
     hard: { name: "어려움", desc: "거의 모든 단어 빈칸" },
   };
 
@@ -193,12 +266,19 @@ export default function QuizPage() {
   if (screen === "setup") {
     return (
       <div className="space-y-8">
-        {/* 헤더 */}
-        <div className="animate-fade-in text-center space-y-2">
-          <h1 className="text-[28px] font-bold tracking-tight">
-            Complete the Words
-          </h1>
-          <p className="text-[15px] text-[#86868b]">주제와 난이도를 선택하세요</p>
+        {/* 헤더 + 다크모드 토글 */}
+        <div className="animate-fade-in flex justify-between items-start">
+          <div className="flex-1 text-center space-y-2">
+            <h1 className="text-[28px] font-bold tracking-tight">Complete the Words</h1>
+            <p className="text-[15px] text-[#86868b]">주제와 난이도를 선택하세요</p>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className="text-[20px] p-2 rounded-full hover:bg-[#1d1d1f]/5 transition-colors"
+            title={`테마: ${currentTheme === "light" ? "라이트" : currentTheme === "dark" ? "다크" : "시스템"}`}
+          >
+            {currentTheme === "light" ? "☀️" : currentTheme === "dark" ? "🌙" : "💻"}
+          </button>
         </div>
 
         {/* 통계 카드 */}
@@ -277,6 +357,26 @@ export default function QuizPage() {
           </div>
         </div>
 
+        {/* 타이머 설정 */}
+        <div className="animate-fade-in delay-4 space-y-3">
+          <h2 className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider">타이머</h2>
+          <button
+            onClick={() => setTimerEnabled(!timerEnabled)}
+            className={`w-full p-4 rounded-2xl text-center transition-all border ${
+              timerEnabled
+                ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
+                : "glass border-white/60 hover:bg-white/80"
+            }`}
+          >
+            <p className="font-semibold text-[15px]">
+              {timerEnabled ? "ON — 2분 30초" : "OFF"}
+            </p>
+            <p className={`text-[11px] mt-1 ${timerEnabled ? "text-white/60" : "text-[#86868b]"}`}>
+              {timerEnabled ? "시간 초과 시 자동 제출" : "시간 제한 없이 연습"}
+            </p>
+          </button>
+        </div>
+
         {/* 규칙 */}
         <div className="animate-fade-in delay-4 glass rounded-2xl p-5 border border-white/60 space-y-3">
           <h2 className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider">규칙</h2>
@@ -316,12 +416,35 @@ export default function QuizPage() {
             {difficultyLabels[selectedDifficulty].name}
           </span>
         </div>
+        {/* 타이머 표시 */}
+        {timerEnabled && (
+          <span className={`text-[13px] font-mono font-semibold ${timeLeft <= 30 ? "text-[#ff3b30]" : "text-[#1d1d1f]"}`}>
+            {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+          </span>
+        )}
         <button
           onClick={goHome}
           className="text-[13px] text-[#0071e3] font-medium hover:underline"
         >
           홈으로
         </button>
+      </div>
+
+      {/* 진행률 바 */}
+      <div className="animate-fade-in space-y-1">
+        <div className="h-1.5 bg-[#1d1d1f]/5 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#0071e3] rounded-full transition-all duration-300"
+            style={{
+              width: `${blankWords.filter(bw => bw.blanked).length > 0
+                ? Math.round((Object.values(answers).filter(v => v.trim() !== "").length / blankWords.filter(bw => bw.blanked).length) * 100)
+                : 0}%`
+            }}
+          />
+        </div>
+        <p className="text-[11px] text-[#86868b] text-right">
+          {Object.values(answers).filter(v => v.trim() !== "").length} / {blankWords.filter(bw => bw.blanked).length}
+        </p>
       </div>
 
       {/* 지문 + 빈칸 */}
@@ -338,10 +461,14 @@ export default function QuizPage() {
                   submitted={submitted}
                   onAnswer={(answer) => handleAnswer(index, answer)}
                   inputRef={inputRefs.current[currentBlankIndex]}
+                  isLast={currentBlankIndex === inputRefs.current.length - 1}
                   onEnter={() => {
                     const nextRef = inputRefs.current[currentBlankIndex + 1];
                     if (nextRef?.current) nextRef.current.focus();
                   }}
+                  wordInfo={lookupWord(bw.original)}
+                  hint={lookupWord(bw.original)?.meaning}
+                  onHintUsed={() => setHintsUsed((prev) => prev + 1)}
                 />
                 {index < blankWords.length - 1 && " "}
               </span>
@@ -365,7 +492,7 @@ export default function QuizPage() {
       {!submitted ? (
         <div className="animate-fade-in delay-3">
           <button
-            onClick={handleSubmit}
+            onClick={trySubmit}
             className="w-full bg-[#34c759] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[#30b855] transition-all active:scale-[0.98]"
           >
             제출하기
@@ -389,8 +516,32 @@ export default function QuizPage() {
               <p className="text-[15px] mt-1 opacity-80">
                 {result.correct} / {result.total} 정답
               </p>
+              {/* 힌트 사용 횟수 표시 */}
+              {hintsUsed > 0 && (
+                <p className="text-[13px] mt-1 opacity-60">
+                  힌트 {hintsUsed}회 사용
+                </p>
+              )}
             </div>
           )}
+
+          {/* 한국어 번역 토글 */}
+          {currentPassage?.translation && (
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowTranslation(!showTranslation)}
+                className="text-[13px] text-[#0071e3] font-medium hover:underline w-full text-center"
+              >
+                {showTranslation ? "번역 숨기기" : "한국어 번역 보기"}
+              </button>
+              {showTranslation && (
+                <div className="glass rounded-2xl p-5 border border-white/60 text-[14px] text-[#86868b] leading-relaxed">
+                  {currentPassage.translation}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={goHome}
@@ -404,6 +555,37 @@ export default function QuizPage() {
             >
               다음 문제
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 제출 확인 모달 */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="glass rounded-2xl p-6 mx-6 max-w-sm w-full border border-white/60 space-y-4 shadow-xl">
+            <p className="text-[17px] font-semibold text-center">
+              빈칸 {blankWords.filter(bw => bw.blanked).filter(bw => {
+                const idx = blankWords.indexOf(bw);
+                return !answers[idx] || answers[idx].trim() === "";
+              }).length}개가 비어있습니다
+            </p>
+            <p className="text-[14px] text-[#86868b] text-center">
+              그래도 제출하시겠습니까?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="glass border border-white/60 text-[#1d1d1f] py-3 rounded-full text-[15px] font-semibold hover:bg-white/80 transition-all"
+              >
+                돌아가기
+              </button>
+              <button
+                onClick={doSubmit}
+                className="bg-[#ff9f0a] text-white py-3 rounded-full text-[15px] font-semibold hover:bg-[#e8900a] transition-all"
+              >
+                제출하기
+              </button>
+            </div>
           </div>
         </div>
       )}
