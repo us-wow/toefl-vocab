@@ -10,8 +10,8 @@ interface BlankInputProps {
   onAnswer: (answer: string) => void;
   onEnter?: () => void; // 엔터 시 다음 빈칸으로
   inputRef?: React.RefObject<HTMLInputElement | null>;
-  isLast?: boolean; // 마지막 빈칸 여부 — 모바일 키보드에 "완료/다음" 표시용
-  wordInfo?: WordInfo; // 단어 해설 정보 (뜻, 발음, 예문)
+  isLast?: boolean; // 마지막 빈칸 여부
+  wordInfo?: WordInfo; // 단어 해설 정보
   hint?: string; // 힌트 (한국어 뜻)
   onHintUsed?: () => void; // 힌트 사용 시 부모에게 알림
 }
@@ -35,18 +35,23 @@ export default function BlankInput({
   const isCorrect = submitted && value.toLowerCase() === hidden.toLowerCase();
   const isWrong = submitted && value.toLowerCase() !== hidden.toLowerCase();
 
+  // 실제 토플처럼 밑줄 개수 = 빠진 글자 수
+  const underscores = "_".repeat(hidden.length);
+
   return (
-    <span className="inline items-baseline relative">
-      {/* 보이는 앞부분 — 빈칸 입력과 붙어서 하나의 단어처럼 보이게 */}
+    <span className="blank-word-wrapper">
+      {/* 보이는 앞부분 — 빈칸과 붙어서 하나의 단어 */}
       <span className="text-[var(--color-text)]">{visible}</span>
 
-      {/* 빈칸 입력 */}
+      {/* 빈칸 입력 — 실제 토플처럼 밑줄이 텍스트에 녹아드는 스타일 */}
       <input
         ref={inputRef}
         type="text"
         autoCapitalize="off"
         autoCorrect="off"
+        autoComplete="off"
         spellCheck={false}
+        maxLength={hidden.length + 2}
         value={value}
         onChange={(e) => {
           setValue(e.target.value);
@@ -55,25 +60,32 @@ export default function BlankInput({
         onKeyDown={(e) => {
           if (e.key === "Enter" && onEnter) onEnter();
           if (e.key === "Tab") {
-            e.preventDefault(); // 기본 Tab 동작 방지 — 다음 빈칸으로 이동
+            e.preventDefault();
             if (onEnter) onEnter();
           }
         }}
         inputMode="text"
         enterKeyHint={isLast ? "done" : "next"}
         disabled={submitted}
-        placeholder={"_".repeat(Math.max(hidden.length, 2))}
-        className={`border-b-2 px-0.5 py-0.5 text-center transition-all duration-200 bg-transparent text-[inherit] ${
+        placeholder={underscores}
+        className={`blank-input ${
           submitted
             ? isCorrect
-              ? "border-[var(--color-success)] text-[var(--color-success-dark)] font-semibold"
-              : "border-[var(--color-error)] text-[var(--color-error)] line-through"
-            : "border-[var(--color-accent)]/40 focus:border-[var(--color-accent)]"
+              ? "blank-correct"
+              : "blank-wrong"
+            : "blank-active"
         }`}
-        style={{ width: `${Math.max(hidden.length, 2) * 0.65}em` }}
+        style={{ width: `${hidden.length * 0.62}em`, minWidth: "1.2em" }}
       />
 
-      {/* 힌트 버튼 — 제출 전에만, 입력 바로 뒤에 작게 표시 */}
+      {/* 제출 후: 오답이면 정답 표시 */}
+      {isWrong && (
+        <span className="text-[var(--color-success-dark)] font-semibold text-[0.85em]">
+          {hidden}
+        </span>
+      )}
+
+      {/* 제출 전: 힌트 버튼 — 단어 바로 뒤에 작게 */}
       {!submitted && hint && (
         <button
           type="button"
@@ -81,24 +93,17 @@ export default function BlankInput({
             if (!showHint && onHintUsed) onHintUsed();
             setShowHint(!showHint);
           }}
-          className="text-[9px] w-4 h-4 rounded-full bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-bold inline-flex items-center justify-center align-super hover:bg-[var(--color-accent)]/20 transition-colors"
+          className="blank-hint-btn"
           title="힌트 보기"
         >
           ?
         </button>
       )}
 
-      {/* 오답이면 정답 표시 */}
-      {isWrong && (
-        <span className="text-[var(--color-success-dark)] text-[13px] font-semibold ml-0.5">
-          {hidden}
-        </span>
-      )}
-
-      {/* 힌트 텍스트 — 제출 전, 힌트 버튼 눌렀을 때 */}
+      {/* 힌트 텍스트 */}
       {showHint && !submitted && hint && (
-        <span className="text-[10px] text-[var(--color-accent)] ml-0.5">
-          ({hint})
+        <span className="text-[0.65em] text-[var(--color-accent)] ml-0.5 align-super">
+          {hint}
         </span>
       )}
 
@@ -107,7 +112,7 @@ export default function BlankInput({
         <button
           type="button"
           onClick={() => setShowExplanation(!showExplanation)}
-          className="text-[11px] text-[var(--color-accent)] ml-1 hover:underline"
+          className="text-[0.7em] text-[var(--color-accent)] ml-1 hover:underline"
         >
           {showExplanation ? "접기" : "해설"}
         </button>

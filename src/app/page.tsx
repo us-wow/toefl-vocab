@@ -345,9 +345,9 @@ export default function QuizPage() {
         {/* 규칙 — 첫 방문자용 간단 안내 (stats 없을 때만) */}
         {stats.totalGames === 0 && (
           <div className="animate-fade-in delay-4 glass rounded-2xl p-5 border border-[var(--color-glass-border)] space-y-2">
-            <h2 className="text-[13px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">이렇게 풀어요</h2>
+            <h2 className="text-[13px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Fill in the missing letters</h2>
             <p className="text-[14px] text-[var(--color-muted)] leading-relaxed">
-              학술 지문에서 단어의 <span className="text-[var(--color-text)] font-medium">뒷부분이 지워집니다.</span> 앞부분을 단서로 정확한 철자를 입력하세요. 대소문자는 구분하지 않습니다.
+              학술 지문에서 단어의 뒷부분이 <span className="text-[var(--color-text)] font-medium">밑줄(___)</span>로 표시됩니다. 실제 토플처럼 빠진 글자를 직접 타이핑하세요.
             </p>
           </div>
         )}
@@ -412,8 +412,13 @@ export default function QuizPage() {
         </p>
       </div>
 
-      {/* 지문 + 빈칸 — 줄간격 축소, 자연스러운 흐름 */}
-      <div className="animate-fade-in delay-1 glass rounded-2xl p-5 border border-[var(--color-glass-border)] leading-[2] text-[16px] shadow-sm">
+      {/* 지문 안내 — 실제 토플 형식 */}
+      <p className="animate-fade-in text-[13px] text-[var(--color-muted)] font-medium">
+        Fill in the missing letters in the paragraph.
+      </p>
+
+      {/* 지문 + 빈칸 — 실제 토플처럼 깔끔한 문단 */}
+      <div className="animate-fade-in delay-1 glass rounded-2xl p-6 border border-[var(--color-glass-border)] leading-[1.9] text-[16px] shadow-sm">
         {blankWords.map((bw, index) => {
           if (bw.blanked) {
             blankCounter++;
