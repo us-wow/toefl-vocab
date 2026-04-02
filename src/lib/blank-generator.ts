@@ -64,6 +64,12 @@ export function generateBlanks(
         const visibleRatio = difficulty === "easy" ? 2 / 3 : difficulty === "normal" ? 0.5 : 1 / 3;
         const splitPoint = Math.max(1, Math.ceil(word.length * visibleRatio));
 
+        // 숨길 부분이 없으면 빈칸 처리 안 함 (짧은 단어에서 splitPoint가 단어 길이와 같아지는 경우)
+        if (splitPoint >= word.length) {
+          result.push({ original: word, visible: word, hidden: "", blanked: false, sentenceIndex, wordIndex });
+          return;
+        }
+
         result.push({
           original: word,
           visible: word.slice(0, splitPoint),
