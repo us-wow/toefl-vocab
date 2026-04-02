@@ -22,10 +22,10 @@ function getResultFeedback(percentage: number): { emoji: string; message: string
   return { emoji: "🌱", message: "Keep going! 틀린 단어를 복습해보세요" };
 }
 
-type Screen = "setup" | "quiz";
+type Screen = "landing" | "setup" | "quiz";
 
 export default function QuizPage() {
-  const [screen, setScreen] = useState<Screen>("setup");
+  const [screen, setScreen] = useState<Screen>("landing");
   const [blankWords, setBlankWords] = useState<BlankWord[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -50,6 +50,10 @@ export default function QuizPage() {
   useEffect(() => {
     setStats(getStats());
     setSeenIds(getSeenPassageIds());
+
+    // 이미 풀어본 적 있으면 랜딩 건너뛰기
+    const visited = localStorage.getItem("toefl-vocab-visited");
+    if (visited === "true") setScreen("setup");
 
     // 다크모드 초기화
     const savedTheme = getTheme();
@@ -211,7 +215,76 @@ export default function QuizPage() {
   }
 
   /* ─────────────────────────────────────────────
-     퀴즈 설정 화면 (온보딩 통합 — 첫 방문자도 바로 이 화면)
+     랜딩 페이지 — 문제 → 해결책 → CTA
+  ───────────────────────────────────────────── */
+  if (screen === "landing") {
+    return (
+      <div className="space-y-10 py-4">
+        {/* 히어로 — 핵심 메시지 */}
+        <div className="animate-fade-in text-center space-y-4">
+          <p className="text-[13px] font-semibold text-[var(--color-accent)] tracking-wider uppercase">
+            2026 TOEFL iBT Reading
+          </p>
+          <h1 className="text-[36px] font-bold tracking-tight leading-[1.15]">
+            객관식이<br />사라졌습니다.
+          </h1>
+          <p className="text-[16px] text-[var(--color-muted)] leading-relaxed">
+            2026년부터 TOEFL Reading에<br />
+            <span className="text-[var(--color-text)] font-medium">빈칸에 직접 타이핑</span>하는 신유형이 추가됩니다.
+          </p>
+        </div>
+
+        {/* 실제 시험 미리보기 — 이게 뭔지 한눈에 */}
+        <div className="animate-fade-in delay-1 glass rounded-2xl p-5 border border-[var(--color-glass-border)] space-y-3">
+          <p className="text-[11px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">
+            실제 시험은 이렇게 나옵니다
+          </p>
+          <p className="text-[15px] leading-[1.9] text-[var(--color-text)]">
+            Early civilizations, including those in Mesopotamia, emerged around river valleys. Th<span className="border-b-2 border-[var(--color-text)] text-[var(--color-accent)] font-medium">ey</span> developed sophis<span className="border-b-2 border-[var(--color-text)]">______</span> social struc<span className="border-b-2 border-[var(--color-text)]">______</span>, written lang<span className="border-b-2 border-[var(--color-text)]">______</span>, and adva<span className="border-b-2 border-[var(--color-text)]">____</span> technologies.
+          </p>
+          <p className="text-[12px] text-[var(--color-muted)]">
+            밑줄 개수 = 빠진 글자 수. 정확한 철자를 알아야 풀 수 있습니다.
+          </p>
+        </div>
+
+        {/* 핵심 차별점 3개 — 짧고 강하게 */}
+        <div className="animate-fade-in delay-2 space-y-3">
+          {[
+            { num: "35+", label: "학술 지문", desc: "생물학, 역사, 심리학 등 시험 출제 주제" },
+            { num: "3단계", label: "난이도 조절", desc: "쉬움 → 보통 → 어려움, 실력에 맞게" },
+            { num: "100%", label: "무료", desc: "로그인 없이 바로 연습" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-4 glass rounded-2xl p-4 border border-[var(--color-glass-border)]">
+              <p className="text-[22px] font-bold text-[var(--color-accent)] min-w-[60px] text-center">{item.num}</p>
+              <div>
+                <p className="text-[14px] font-semibold text-[var(--color-text)]">{item.label}</p>
+                <p className="text-[12px] text-[var(--color-muted)]">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="animate-fade-in delay-3 space-y-3">
+          <button
+            onClick={() => {
+              localStorage.setItem("toefl-vocab-visited", "true");
+              setScreen("setup");
+            }}
+            className="w-full bg-[var(--color-accent)] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[var(--color-accent-hover)] transition-all active:scale-[0.98]"
+          >
+            지금 연습하기
+          </button>
+          <p className="text-[12px] text-[var(--color-muted)] text-center">
+            회원가입 필요 없음 · 모바일 최적화 · 다크모드 지원
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─────────────────────────────────────────────
+     퀴즈 설정 화면
   ───────────────────────────────────────────── */
   if (screen === "setup") {
     return (
