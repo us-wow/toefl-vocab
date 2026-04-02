@@ -105,3 +105,11 @@ body {
 input:focus {
   outline: none;
 }
+
+/* 빈칸 입력 — 단어와 자연스럽게 이어지도록 인라인 처리 */
+input[type="text"] {
+  vertical-align: baseline;
+  line-height: inherit;
+  font-size: inherit;
+  font-family: inherit;
+}

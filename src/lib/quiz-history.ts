@@ -7,9 +7,11 @@ export interface QuizRecord {
   correct: number; // 맞은 개수
   total: number; // 전체 빈칸 수
   percentage: number; // 정답률 (0~100)
+  passageId?: number; // 풀었던 지문 ID
 }
 
 const STORAGE_KEY = "toefl-vocab-history";
+const SEEN_KEY = "toefl-vocab-seen"; // 풀었던 지문 ID 목록
 
 // 저장된 기록 전체 불러오기
 export function getHistory(): QuizRecord[] {
@@ -27,11 +29,15 @@ export function getHistory(): QuizRecord[] {
 export function saveRecord(record: QuizRecord): void {
   const history = getHistory();
   history.unshift(record); // 최신 기록을 맨 앞에
-  // 100개 넘으면 오래된 것 제거
   if (history.length > 100) {
     history.splice(100);
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+
+  // 지문 ID가 있으면 풀었던 목록에도 추가
+  if (record.passageId !== undefined) {
+    markPassageSeen(record.passageId);
+  }
 }
 
 // 통계 요약 계산
@@ -52,4 +58,25 @@ export function getStats(): {
   const bestPercent = Math.max(...history.map((r) => r.percentage));
 
   return { totalGames, averagePercent, bestPercent };
+}
+
+// ─── 풀었던 지문 추적 ───
+
+// 풀었던 지문 ID Set 가져오기
+export function getSeenPassageIds(): Set<number> {
+  if (typeof window === "undefined") return new Set();
+  const raw = localStorage.getItem(SEEN_KEY);
+  if (!raw) return new Set();
+  try {
+    return new Set(JSON.parse(raw) as number[]);
+  } catch {
+    return new Set();
+  }
+}
+
+// 지문을 풀었다고 표시
+export function markPassageSeen(id: number): void {
+  const seen = getSeenPassageIds();
+  seen.add(id);
+  localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
 }

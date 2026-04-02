@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, createRef } from "react";
 import { generateBlanks, checkAnswer } from "@/lib/blank-generator";
 import type { Difficulty } from "@/lib/blank-generator";
 import { samplePassages } from "@/lib/sample-passages";
-import { saveRecord, getStats } from "@/lib/quiz-history";
+import { saveRecord, getStats, getSeenPassageIds } from "@/lib/quiz-history";
 import { lookupWord } from "@/lib/word-data";
 import { getTheme, setTheme, applyTheme, watchSystemTheme } from "@/lib/theme";
 import type { Theme } from "@/lib/theme";
@@ -13,10 +13,19 @@ import type { BlankWord } from "@/lib/blank-generator";
 
 const allTopics = [...new Set(samplePassages.map((p) => p.topic))];
 
-type Screen = "onboarding" | "setup" | "quiz";
+// 결과에 따른 감정 피드백 메시지
+function getResultFeedback(percentage: number): { emoji: string; message: string } {
+  if (percentage === 100) return { emoji: "🎯", message: "Perfect! 완벽해요!" };
+  if (percentage >= 90) return { emoji: "🔥", message: "Excellent! 거의 다 맞았어요!" };
+  if (percentage >= 70) return { emoji: "💪", message: "Great! 잘하고 있어요!" };
+  if (percentage >= 50) return { emoji: "📖", message: "Good try! 조금만 더 연습하면 돼요" };
+  return { emoji: "🌱", message: "Keep going! 틀린 단어를 복습해보세요" };
+}
+
+type Screen = "setup" | "quiz";
 
 export default function QuizPage() {
-  const [screen, setScreen] = useState<Screen>("onboarding");
+  const [screen, setScreen] = useState<Screen>("setup");
   const [blankWords, setBlankWords] = useState<BlankWord[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -28,18 +37,19 @@ export default function QuizPage() {
   const [selectedTopic, setSelectedTopic] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>("easy");
   const [stats, setStats] = useState({ totalGames: 0, averagePercent: 0, bestPercent: 0 });
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false); // 제출 확인 모달
-  const [timerEnabled, setTimerEnabled] = useState(false); // 타이머 ON/OFF
-  const [timeLeft, setTimeLeft] = useState(0); // 남은 시간 (초)
-  const [currentTheme, setCurrentTheme] = useState<Theme>("system"); // 다크모드 테마
-  const [hintsUsed, setHintsUsed] = useState(0); // 힌트 사용 횟수
-  const [currentPassage, setCurrentPassage] = useState<typeof samplePassages[0] | null>(null); // 현재 지문 (번역 표시용)
-  const [showTranslation, setShowTranslation] = useState(false); // 한국어 번역 토글
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [timerEnabled, setTimerEnabled] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [currentTheme, setCurrentTheme] = useState<Theme>("system");
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [currentPassage, setCurrentPassage] = useState<typeof samplePassages[0] | null>(null);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [seenIds, setSeenIds] = useState<Set<number>>(new Set()); // 풀었던 지문 ID
+  const [showWrongWords, setShowWrongWords] = useState(false); // 오답 모아보기 토글
 
   useEffect(() => {
     setStats(getStats());
-    const seen = localStorage.getItem("toefl-vocab-onboarded");
-    if (seen === "true") setScreen("setup");
+    setSeenIds(getSeenPassageIds());
 
     // 다크모드 초기화
     const savedTheme = getTheme();
@@ -61,7 +71,7 @@ export default function QuizPage() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          doSubmit(); // 시간 초과 시 자동 제출
+          doSubmit();
           return 0;
         }
         return prev - 1;
@@ -71,25 +81,26 @@ export default function QuizPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, timerEnabled, submitted, timeLeft > 0]);
 
-  // 다크모드 순환 토글: light → dark → system → light ...
+  // 다크모드 순환 토글
   function toggleTheme() {
     const next: Theme = currentTheme === "light" ? "dark" : currentTheme === "dark" ? "system" : "light";
     setCurrentTheme(next);
     setTheme(next);
   }
 
-  function finishOnboarding() {
-    localStorage.setItem("toefl-vocab-onboarded", "true");
-    setScreen("setup");
-  }
-
   function startQuiz() {
+    // 선택된 주제 필터링
     const filtered =
       selectedTopic === "all"
         ? samplePassages
         : samplePassages.filter((p) => p.topic === selectedTopic);
-    const passage = filtered[Math.floor(Math.random() * filtered.length)];
-    setCurrentPassage(passage); // 번역 표시용 현재 지문 저장
+
+    // 안 풀었던 지문 우선 출제, 다 풀었으면 랜덤
+    const unseen = filtered.filter((p) => !seenIds.has(p.id));
+    const pool = unseen.length > 0 ? unseen : filtered;
+    const passage = pool[Math.floor(Math.random() * pool.length)];
+
+    setCurrentPassage(passage);
     const blanks = generateBlanks(passage.text, selectedDifficulty);
 
     setBlankWords(blanks);
@@ -97,12 +108,12 @@ export default function QuizPage() {
     setSubmitted(false);
     setResult(null);
     setShowConfirmDialog(false);
-    setHintsUsed(0); // 힌트 사용 횟수 초기화
-    setShowTranslation(false); // 번역 토글 초기화
+    setHintsUsed(0);
+    setShowTranslation(false);
+    setShowWrongWords(false);
     setScreen("quiz");
     setCurrentTopic(passage.topic);
 
-    // 타이머 설정 — 켜져 있으면 150초(2분 30초)
     if (timerEnabled) setTimeLeft(150);
 
     const blankedCount = blanks.filter((bw) => bw.blanked).length;
@@ -110,7 +121,6 @@ export default function QuizPage() {
       createRef<HTMLInputElement>()
     );
 
-    // 첫 빈칸 자동 포커스 (렌더링 후 실행되도록 setTimeout)
     setTimeout(() => {
       inputRefs.current[0]?.current?.focus();
     }, 300);
@@ -122,13 +132,13 @@ export default function QuizPage() {
     setSubmitted(false);
     setResult(null);
     setStats(getStats());
+    setSeenIds(getSeenPassageIds()); // 풀었던 목록 갱신
   }
 
   function handleAnswer(index: number, answer: string) {
     setAnswers((prev) => ({ ...prev, [index]: answer }));
   }
 
-  // 제출 버튼 클릭 시 — 빈 빈칸이 있으면 확인 모달 표시
   function trySubmit() {
     const blankedWords = blankWords.filter((bw) => bw.blanked);
     const emptyCount = blankedWords.filter((bw) => {
@@ -137,13 +147,12 @@ export default function QuizPage() {
     }).length;
 
     if (emptyCount > 0) {
-      setShowConfirmDialog(true); // 빈칸 있으면 확인 모달
+      setShowConfirmDialog(true);
     } else {
-      doSubmit(); // 다 채웠으면 바로 제출
+      doSubmit();
     }
   }
 
-  // 실제 제출 처리
   function doSubmit() {
     setShowConfirmDialog(false);
     setSubmitted(true);
@@ -157,8 +166,31 @@ export default function QuizPage() {
     const total = blankedWords.length;
     const percentage = Math.round((correctCount / total) * 100);
     setResult({ correct: correctCount, total });
-    saveRecord({ date: new Date().toISOString(), topic: currentTopic, correct: correctCount, total, percentage });
+
+    // passageId 포함해서 저장 → 풀었던 문제 자동 추적
+    saveRecord({
+      date: new Date().toISOString(),
+      topic: currentTopic,
+      correct: correctCount,
+      total,
+      percentage,
+      passageId: currentPassage?.id,
+    });
     setStats(getStats());
+    setSeenIds(getSeenPassageIds());
+  }
+
+  // 오답 단어 목록 계산
+  function getWrongWords(): { original: string; visible: string; hidden: string; userAnswer: string }[] {
+    if (!submitted) return [];
+    return blankWords
+      .filter((bw) => bw.blanked)
+      .map((bw) => {
+        const idx = blankWords.indexOf(bw);
+        const userAnswer = answers[idx] || "";
+        return { original: bw.original, visible: bw.visible, hidden: bw.hidden, userAnswer };
+      })
+      .filter((w) => w.userAnswer.toLowerCase() !== w.hidden.toLowerCase());
   }
 
   let blankCounter = -1;
@@ -169,99 +201,17 @@ export default function QuizPage() {
     hard: { name: "어려움", desc: "거의 모든 단어 빈칸" },
   };
 
-  /* ─────────────────────────────────────────────
-     온보딩 화면
-  ───────────────────────────────────────────── */
-  if (screen === "onboarding") {
-    return (
-      <div className="space-y-10">
-        {/* 히어로 */}
-        <div className="animate-fade-in text-center pt-8 space-y-4">
-          <h1 className="text-[42px] font-bold tracking-tight leading-tight">
-            Complete<br />the Words.
-          </h1>
-          <p className="text-lg text-[var(--color-muted)]">
-            2026 TOEFL Reading 신유형을 연습하세요.
-          </p>
-        </div>
-
-        {/* 핵심 메시지 */}
-        <div className="animate-fade-in delay-1 glass rounded-2xl p-6 space-y-4 border border-[var(--color-glass-border)]">
-          <h2 className="text-xl font-semibold">
-            2026년, TOEFL이 바뀝니다.
-          </h2>
-          <p className="text-[15px] text-[var(--color-muted)] leading-relaxed">
-            ETS는 Reading 섹션에 <span className="text-[var(--color-text)] font-medium">Complete the Words</span> 유형을
-            새로 추가했습니다. 학술 지문에서 단어의 뒷부분이 지워지고,
-            <span className="text-[var(--color-text)] font-medium"> 직접 타이핑</span>해야 합니다.
-          </p>
-          <p className="text-[15px] text-[var(--color-muted)] leading-relaxed">
-            객관식이 아닙니다. <span className="text-[var(--color-text)] font-medium">정확한 철자</span>를 알아야 풀 수 있습니다.
-          </p>
-        </div>
-
-        {/* 차별점 3가지 */}
-        <div className="space-y-4">
-          {[
-            {
-              title: "실제 시험과 동일한 형식",
-              desc: "ETS 공식 규칙 그대로. 첫 문장은 온전히, 이후 단어의 뒷부분이 빈칸.",
-            },
-            {
-              title: "TOEFL 빈출 학술 지문",
-              desc: "생물학, 역사, 천문학 등 시험에 나오는 주제별 지문 35개+",
-            },
-            {
-              title: "내 실력을 추적",
-              desc: "풀이 횟수, 평균 정답률, 최고 기록을 자동 저장.",
-            },
-          ].map((item, i) => (
-            <div
-              key={item.title}
-              className={`animate-fade-in delay-${i + 2} glass rounded-2xl p-5 border border-[var(--color-glass-border)]`}
-            >
-              <p className="font-semibold text-[15px]">{item.title}</p>
-              <p className="text-[13px] text-[var(--color-muted)] mt-1">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* 대상 */}
-        <div className="animate-fade-in delay-5 space-y-3">
-          <h3 className="text-sm font-semibold text-[var(--color-muted)] uppercase tracking-wider">
-            이런 분들을 위해 만들었습니다
-          </h3>
-          <ul className="text-[15px] text-[var(--color-text)] space-y-2">
-            <li className="flex gap-2">
-              <span className="text-[var(--color-muted)]">—</span>
-              2026 TOEFL을 준비하는데, 신유형 연습할 곳이 없는 분
-            </li>
-            <li className="flex gap-2">
-              <span className="text-[var(--color-muted)]">—</span>
-              객관식은 잘 맞는데, 직접 쓰라고 하면 철자가 헷갈리는 분
-            </li>
-            <li className="flex gap-2">
-              <span className="text-[var(--color-muted)]">—</span>
-              학술 영어 어휘력을 빠르게 끌어올리고 싶은 분
-            </li>
-          </ul>
-        </div>
-
-        {/* CTA */}
-        <div className="animate-fade-in delay-6 pt-2">
-          <button
-            onClick={finishOnboarding}
-            className="w-full bg-[var(--color-accent)] text-white py-4 rounded-full text-[17px] font-semibold hover:bg-[var(--color-accent-hover)] transition-all active:scale-[0.98]"
-          >
-            시작하기
-          </button>
-        </div>
-      </div>
-    );
+  // 주제별 풀었던/전체 개수 계산
+  function getTopicProgress(topic: string): { seen: number; total: number } {
+    const passages = topic === "all"
+      ? samplePassages
+      : samplePassages.filter((p) => p.topic === topic);
+    const seen = passages.filter((p) => seenIds.has(p.id)).length;
+    return { seen, total: passages.length };
   }
 
   /* ─────────────────────────────────────────────
-     퀴즈 설정 화면
+     퀴즈 설정 화면 (온보딩 통합 — 첫 방문자도 바로 이 화면)
   ───────────────────────────────────────────── */
   if (screen === "setup") {
     return (
@@ -270,7 +220,9 @@ export default function QuizPage() {
         <div className="animate-fade-in flex justify-between items-start">
           <div className="flex-1 text-center space-y-2">
             <h1 className="text-[28px] font-bold tracking-tight">Complete the Words</h1>
-            <p className="text-[15px] text-[var(--color-muted)]">주제와 난이도를 선택하세요</p>
+            <p className="text-[14px] text-[var(--color-muted)]">
+              2026 TOEFL Reading 신유형 연습
+            </p>
           </div>
           <button
             onClick={toggleTheme}
@@ -297,36 +249,49 @@ export default function QuizPage() {
           </div>
         )}
 
-        {/* 주제 선택 */}
+        {/* 주제 선택 — 풀었던 개수 표시 */}
         <div className="animate-fade-in delay-2 space-y-3">
           <h2 className="text-[13px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">주제</h2>
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedTopic("all")}
-              className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
-                selectedTopic === "all"
-                  ? "bg-[var(--color-text)] text-white"
-                  : "glass border border-[var(--color-glass-border)] text-[var(--color-text)] hover:bg-[var(--color-glass-hover)]"
-              }`}
-            >
-              전체
-            </button>
-            {allTopics.map((topic) => (
-              <button
-                key={topic}
-                onClick={() => setSelectedTopic(topic)}
-                className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
-                  selectedTopic === topic
-                    ? "bg-[var(--color-text)] text-white"
-                    : "glass border border-[var(--color-glass-border)] text-[var(--color-text)] hover:bg-[var(--color-glass-hover)]"
-                }`}
-              >
-                {topic}
-                <span className="ml-1 opacity-50">
-                  {samplePassages.filter((p) => p.topic === topic).length}
-                </span>
-              </button>
-            ))}
+            {/* "전체" 버튼 */}
+            {(() => {
+              const progress = getTopicProgress("all");
+              return (
+                <button
+                  onClick={() => setSelectedTopic("all")}
+                  className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
+                    selectedTopic === "all"
+                      ? "bg-[var(--color-text)] text-white"
+                      : "glass border border-[var(--color-glass-border)] text-[var(--color-text)] hover:bg-[var(--color-glass-hover)]"
+                  }`}
+                >
+                  전체
+                  <span className={`ml-1 ${selectedTopic === "all" ? "opacity-60" : "opacity-40"}`}>
+                    {progress.seen}/{progress.total}
+                  </span>
+                </button>
+              );
+            })()}
+            {allTopics.map((topic) => {
+              const progress = getTopicProgress(topic);
+              const allDone = progress.seen === progress.total;
+              return (
+                <button
+                  key={topic}
+                  onClick={() => setSelectedTopic(topic)}
+                  className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
+                    selectedTopic === topic
+                      ? "bg-[var(--color-text)] text-white"
+                      : "glass border border-[var(--color-glass-border)] text-[var(--color-text)] hover:bg-[var(--color-glass-hover)]"
+                  }`}
+                >
+                  {topic}
+                  <span className={`ml-1 ${selectedTopic === topic ? "opacity-60" : "opacity-40"}`}>
+                    {allDone ? "✓" : `${progress.seen}/${progress.total}`}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -377,16 +342,15 @@ export default function QuizPage() {
           </button>
         </div>
 
-        {/* 규칙 */}
-        <div className="animate-fade-in delay-4 glass rounded-2xl p-5 border border-[var(--color-glass-border)] space-y-3">
-          <h2 className="text-[13px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">규칙</h2>
-          <ul className="text-[14px] text-[var(--color-text)] space-y-2">
-            <li className="flex gap-2"><span className="text-[var(--color-muted)]">1.</span> 첫 문장은 온전히 제공됩니다</li>
-            <li className="flex gap-2"><span className="text-[var(--color-muted)]">2.</span> 이후 단어의 뒷부분이 지워집니다</li>
-            <li className="flex gap-2"><span className="text-[var(--color-muted)]">3.</span> 빈칸에 정확한 철자를 입력하세요</li>
-            <li className="flex gap-2"><span className="text-[var(--color-muted)]">4.</span> 대소문자는 구분하지 않습니다</li>
-          </ul>
-        </div>
+        {/* 규칙 — 첫 방문자용 간단 안내 (stats 없을 때만) */}
+        {stats.totalGames === 0 && (
+          <div className="animate-fade-in delay-4 glass rounded-2xl p-5 border border-[var(--color-glass-border)] space-y-2">
+            <h2 className="text-[13px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">이렇게 풀어요</h2>
+            <p className="text-[14px] text-[var(--color-muted)] leading-relaxed">
+              학술 지문에서 단어의 <span className="text-[var(--color-text)] font-medium">뒷부분이 지워집니다.</span> 앞부분을 단서로 정확한 철자를 입력하세요. 대소문자는 구분하지 않습니다.
+            </p>
+          </div>
+        )}
 
         {/* 시작 */}
         <div className="animate-fade-in delay-5">
@@ -404,6 +368,8 @@ export default function QuizPage() {
   /* ─────────────────────────────────────────────
      퀴즈 진행 화면
   ───────────────────────────────────────────── */
+  const wrongWords = getWrongWords();
+
   return (
     <div className="space-y-6">
       {/* 상단 바 */}
@@ -416,7 +382,6 @@ export default function QuizPage() {
             {difficultyLabels[selectedDifficulty].name}
           </span>
         </div>
-        {/* 타이머 표시 */}
         {timerEnabled && (
           <span className={`text-[13px] font-mono font-semibold ${timeLeft <= 30 ? "text-[var(--color-error)]" : "text-[var(--color-text)]"}`}>
             {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
@@ -447,8 +412,8 @@ export default function QuizPage() {
         </p>
       </div>
 
-      {/* 지문 + 빈칸 */}
-      <div className="animate-fade-in delay-1 glass rounded-2xl p-6 border border-[var(--color-glass-border)] leading-[2.5] text-[17px] shadow-sm">
+      {/* 지문 + 빈칸 — 줄간격 축소, 자연스러운 흐름 */}
+      <div className="animate-fade-in delay-1 glass rounded-2xl p-5 border border-[var(--color-glass-border)] leading-[2] text-[16px] shadow-sm">
         {blankWords.map((bw, index) => {
           if (bw.blanked) {
             blankCounter++;
@@ -500,27 +465,72 @@ export default function QuizPage() {
         </div>
       ) : (
         <div className="animate-fade-in space-y-4">
-          {result && (
-            <div
-              className={`text-center py-6 rounded-2xl ${
-                result.correct === result.total
-                  ? "bg-[var(--color-success)]/10 text-[var(--color-success-dark)]"
-                  : result.correct >= result.total / 2
-                    ? "bg-[var(--color-warning)]/10 text-[var(--color-warning-dark)]"
-                    : "bg-[var(--color-error)]/10 text-[var(--color-error-dark)]"
-              }`}
-            >
-              <p className="text-3xl font-bold">
-                {Math.round((result.correct / result.total) * 100)}%
-              </p>
-              <p className="text-[15px] mt-1 opacity-80">
-                {result.correct} / {result.total} 정답
-              </p>
-              {/* 힌트 사용 횟수 표시 */}
-              {hintsUsed > 0 && (
-                <p className="text-[13px] mt-1 opacity-60">
-                  힌트 {hintsUsed}회 사용
+          {/* 결과 + 감정 피드백 */}
+          {result && (() => {
+            const percentage = Math.round((result.correct / result.total) * 100);
+            const feedback = getResultFeedback(percentage);
+            return (
+              <div
+                className={`text-center py-6 rounded-2xl ${
+                  result.correct === result.total
+                    ? "bg-[var(--color-success)]/10 text-[var(--color-success-dark)]"
+                    : result.correct >= result.total / 2
+                      ? "bg-[var(--color-warning)]/10 text-[var(--color-warning-dark)]"
+                      : "bg-[var(--color-error)]/10 text-[var(--color-error-dark)]"
+                }`}
+              >
+                <p className="text-4xl mb-1">{feedback.emoji}</p>
+                <p className="text-3xl font-bold">{percentage}%</p>
+                <p className="text-[15px] mt-1 opacity-80">
+                  {result.correct} / {result.total} 정답
                 </p>
+                <p className="text-[14px] mt-2 font-medium">{feedback.message}</p>
+                {hintsUsed > 0 && (
+                  <p className="text-[13px] mt-1 opacity-60">
+                    힌트 {hintsUsed}회 사용
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* 오답 단어 모아보기 */}
+          {wrongWords.length > 0 && (
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowWrongWords(!showWrongWords)}
+                className="w-full text-center text-[13px] text-[var(--color-error)] font-medium hover:underline"
+              >
+                {showWrongWords ? "오답 접기" : `틀린 단어 ${wrongWords.length}개 모아보기`}
+              </button>
+              {showWrongWords && (
+                <div className="glass rounded-2xl border border-[var(--color-glass-border)] overflow-hidden">
+                  {wrongWords.map((w, i) => {
+                    const wordInfo = lookupWord(w.original);
+                    return (
+                      <div
+                        key={i}
+                        className={`p-4 ${i > 0 ? "border-t border-[var(--color-glass-border)]" : ""}`}
+                      >
+                        <div className="flex items-baseline justify-between">
+                          <p className="text-[15px] font-semibold text-[var(--color-text)]">
+                            {w.visible}<span className="text-[var(--color-success-dark)]">{w.hidden}</span>
+                          </p>
+                          {w.userAnswer && (
+                            <p className="text-[13px] text-[var(--color-error)] line-through">
+                              {w.visible}{w.userAnswer}
+                            </p>
+                          )}
+                        </div>
+                        {wordInfo && (
+                          <p className="text-[12px] text-[var(--color-muted)] mt-1">
+                            {wordInfo.meaning} · {wordInfo.pronunciation}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}

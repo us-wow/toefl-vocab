@@ -36,24 +36,9 @@ export default function BlankInput({
   const isWrong = submitted && value.toLowerCase() !== hidden.toLowerCase();
 
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-0 relative">
-      {/* 보이는 앞부분 */}
+    <span className="inline items-baseline relative">
+      {/* 보이는 앞부분 — 빈칸 입력과 붙어서 하나의 단어처럼 보이게 */}
       <span className="text-[var(--color-text)]">{visible}</span>
-
-      {/* 힌트 버튼 — 제출 전에만 표시 */}
-      {!submitted && hint && (
-        <button
-          type="button"
-          onClick={() => {
-            if (!showHint && onHintUsed) onHintUsed(); // 처음 열 때만 카운트
-            setShowHint(!showHint);
-          }}
-          className="text-[11px] w-5 h-5 rounded-full bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-bold flex-shrink-0 hover:bg-[var(--color-accent)]/20 transition-colors"
-          title="힌트 보기"
-        >
-          ?
-        </button>
-      )}
 
       {/* 빈칸 입력 */}
       <input
@@ -74,19 +59,34 @@ export default function BlankInput({
             if (onEnter) onEnter();
           }
         }}
-        inputMode="text" // 모바일에서 텍스트 키보드 강제 표시
-        enterKeyHint={isLast ? "done" : "next"} // 모바일 키보드에 "다음" 또는 "완료" 표시
+        inputMode="text"
+        enterKeyHint={isLast ? "done" : "next"}
         disabled={submitted}
-        placeholder={"·".repeat(hidden.length)}
-        className={`border-b-2 px-0.5 min-h-[36px] py-1 text-center transition-all duration-200 bg-transparent ${
+        placeholder={"_".repeat(Math.max(hidden.length, 2))}
+        className={`border-b-2 px-0.5 py-0.5 text-center transition-all duration-200 bg-transparent text-[inherit] ${
           submitted
             ? isCorrect
               ? "border-[var(--color-success)] text-[var(--color-success-dark)] font-semibold"
               : "border-[var(--color-error)] text-[var(--color-error)] line-through"
             : "border-[var(--color-accent)]/40 focus:border-[var(--color-accent)]"
         }`}
-        style={{ width: `${Math.max(hidden.length, 3) * 0.75}em` }}
+        style={{ width: `${Math.max(hidden.length, 2) * 0.65}em` }}
       />
+
+      {/* 힌트 버튼 — 제출 전에만, 입력 바로 뒤에 작게 표시 */}
+      {!submitted && hint && (
+        <button
+          type="button"
+          onClick={() => {
+            if (!showHint && onHintUsed) onHintUsed();
+            setShowHint(!showHint);
+          }}
+          className="text-[9px] w-4 h-4 rounded-full bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-bold inline-flex items-center justify-center align-super hover:bg-[var(--color-accent)]/20 transition-colors"
+          title="힌트 보기"
+        >
+          ?
+        </button>
+      )}
 
       {/* 오답이면 정답 표시 */}
       {isWrong && (
@@ -95,14 +95,14 @@ export default function BlankInput({
         </span>
       )}
 
-      {/* 힌트 텍스트 — 제출 전, 힌트 버튼 눌렀을 때 표시 */}
+      {/* 힌트 텍스트 — 제출 전, 힌트 버튼 눌렀을 때 */}
       {showHint && !submitted && hint && (
-        <span className="text-[11px] text-[var(--color-accent)] ml-1">
-          {hint}
+        <span className="text-[10px] text-[var(--color-accent)] ml-0.5">
+          ({hint})
         </span>
       )}
 
-      {/* 오답 해설 버튼 — 탭하면 뜻/발음/예문 표시 */}
+      {/* 오답 해설 버튼 */}
       {isWrong && wordInfo && (
         <button
           type="button"
@@ -113,9 +113,9 @@ export default function BlankInput({
         </button>
       )}
 
-      {/* 오답 해설 카드 — 뜻, 발음, 예문 표시 */}
+      {/* 오답 해설 카드 */}
       {showExplanation && isWrong && wordInfo && (
-        <span className="basis-full block mt-1 mb-1 px-2 py-1.5 rounded-lg bg-[var(--color-accent)]/5 text-[12px] leading-relaxed">
+        <span className="block mt-1 mb-1 px-2 py-1.5 rounded-lg bg-[var(--color-accent)]/5 text-[12px] leading-relaxed">
           <span className="block font-semibold text-[var(--color-text)]">{wordInfo.meaning}</span>
           <span className="block text-[var(--color-muted)]">{wordInfo.pronunciation}</span>
           <span className="block text-[var(--color-muted)] italic">{wordInfo.example}</span>
