@@ -334,7 +334,7 @@ export default function QuizPage() {
                   onClick={() => setSelectedTopic("all")}
                   className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
                     selectedTopic === "all"
-                      ? "bg-[var(--color-text)] text-[var(--color-bg)]"
+                      ? "bg-[var(--color-accent)] text-white"
                       : "glass border border-[var(--color-glass-border)] text-[var(--color-text)] hover:bg-[var(--color-glass-hover)]"
                   }`}
                 >
@@ -354,7 +354,7 @@ export default function QuizPage() {
                   onClick={() => setSelectedTopic(topic)}
                   className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
                     selectedTopic === topic
-                      ? "bg-[var(--color-text)] text-[var(--color-bg)]"
+                      ? "bg-[var(--color-accent)] text-white"
                       : "glass border border-[var(--color-glass-border)] text-[var(--color-text)] hover:bg-[var(--color-glass-hover)]"
                   }`}
                 >
@@ -378,7 +378,7 @@ export default function QuizPage() {
                 onClick={() => setSelectedDifficulty(diff)}
                 className={`p-4 rounded-2xl text-center transition-all border ${
                   selectedDifficulty === diff
-                    ? "bg-[var(--color-text)] text-[var(--color-bg)] border-[var(--color-text)]"
+                    ? "bg-[var(--color-accent)] text-white border-[var(--color-accent)]"
                     : "glass border-[var(--color-glass-border)] hover:bg-[var(--color-glass-hover)]"
                 }`}
               >
@@ -402,7 +402,7 @@ export default function QuizPage() {
             onClick={() => setTimerEnabled(!timerEnabled)}
             className={`w-full p-4 rounded-2xl text-center transition-all border ${
               timerEnabled
-                ? "bg-[var(--color-text)] text-[var(--color-bg)] border-[var(--color-text)]"
+                ? "bg-[var(--color-accent)] text-white border-[var(--color-accent)]"
                 : "glass border-[var(--color-glass-border)] hover:bg-[var(--color-glass-hover)]"
             }`}
           >
